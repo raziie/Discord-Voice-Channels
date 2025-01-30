@@ -4,7 +4,6 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const Channel = require('./models/channel');
-const User = require('./models/user');
 
 require('dotenv').config();
 connectDB();
@@ -19,9 +18,22 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-// Instead of handling REST API requests (app.get, app.post), it listens for WebSocket events.
 io.on("connection", (socket) => {
     console.log("New user connected");
+
+    // Handle finding all channels
+    socket.on("get-channels", async () => {
+        // Find all channels
+        const channels = await Channel.find({});
+
+        if (!channels) {
+            // If no channel exists
+            channels = []
+        }
+        // Return a welcome message to the connected client
+        socket.emit("channels", channels );
+
+    });
   
     // Handle user joining a channel
     socket.on("join-channel", async (data) => {
@@ -67,11 +79,6 @@ io.on("connection", (socket) => {
         channel.users = channel.users.filter((id) => id !== userId);
         await channel.save();
   
-        // If no users are left in the channel, remove the channel from MongoDB
-        if (channel.users.length === 0) {
-          await Channel.deleteOne({ name: channelId });
-        }
-  
         // Emit to other users that a user has left the channel
         socket.to(channelId).emit("user-left", { userId });
   
@@ -97,7 +104,8 @@ io.on("connection", (socket) => {
     socket.on("disconnect", () => {
       console.log("User disconnected");
     });
-  });  
+
+});  
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

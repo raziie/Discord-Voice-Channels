@@ -6,11 +6,26 @@ const socket = io("http://localhost:5000");
 let localStream;
 
 const VoiceChannelApp = () => {
+  const [channelName, setChannelName] = useState("");
   const [isMuted, setIsMuted] = useState(false);
   const [channelId, setChannelId] = useState("");
   const [userId] = useState(Math.random().toString(36).substring(7)); // Random user ID
   const [channelUsers, setChannelUsers] = useState([]);
-  const [availableChannels, setAvailableChannels] = useState(["general", "tech", "gaming"]);
+  const [channels, setChannels] = useState([]);
+
+    useEffect(() => {
+        socket.emit("get-channels");
+
+        const handleChannels = (channels) => {
+            setChannels(channels);
+        };
+
+        socket.on("channels", handleChannels);
+
+        return () => {
+        socket.off("channels", handleChannels); // Cleanup listener on unmount
+        };
+    }, []);
 
   useEffect(() => {
     // Get the user's media (audio)
@@ -73,10 +88,11 @@ const VoiceChannelApp = () => {
       {!channelId ? (
         <div>
           <h2>Create or Join a Channel</h2>
-          <button onClick={() => handleCreateChannel("general")}>Create General Channel</button>
-          <button onClick={() => handleJoinChannel("general")}>Join General Channel</button>
-          <button onClick={() => handleJoinChannel("tech")}>Join Tech Channel</button>
-          <button onClick={() => handleJoinChannel("gaming")}>Join Gaming Channel</button>
+          <input onChange={(e) => setChannelName(e.target.value)} placeholder="New channel" />
+          <button onClick={() => handleCreateChannel(channelName)}>Create Channel</button>
+          {channels.map((channel) => (
+            <button onClick={() => handleJoinChannel(channel.name)}>Join {channel.name} Channel</button>
+          ))}
         </div>
       ) : (
         <div>
