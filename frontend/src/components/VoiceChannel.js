@@ -1,106 +1,104 @@
-import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import React, { useEffect, useState } from "react";
+import io from "socket.io-client";
 
-const socket = io('http://localhost:5000'); // Adjust your server's URL
+const socket = io("http://localhost:5000");
 
-const VoiceChannel = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState('');
-  const [chatInputVisible, setChatInputVisible] = useState(false);
+let localStream;
 
-  // Socket event listeners
+const VoiceChannelApp = () => {
+  const [isMuted, setIsMuted] = useState(false);
+  const [channelId, setChannelId] = useState("");
+  const [userId] = useState(Math.random().toString(36).substring(7)); // Random user ID
+  const [channelUsers, setChannelUsers] = useState([]);
+  const [availableChannels, setAvailableChannels] = useState(["general", "tech", "gaming"]);
+
   useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Connected to WebSocket server');
-    });
+    // Get the user's media (audio)
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        localStream = stream;
+        document.getElementById("local-audio").srcObject = stream;
 
-    socket.on('user-connected', (userId) => {
-      setUsers((prevUsers) => [...prevUsers, userId]);
-    });
+        socket.on("user-joined", (data) => {
+          console.log(`${data.userId} joined the channel`);
+          setChannelUsers((prev) => [...prev, data.userId]);
+        });
 
-    socket.on('user-disconnected', (userId) => {
-      setUsers((prevUsers) => prevUsers.filter((user) => user !== userId));
-    });
+        socket.on("user-left", (data) => {
+          console.log(`${data.userId} left the channel`);
+          setChannelUsers((prev) => prev.filter((id) => id !== data.userId));
+        });
 
-    socket.on('chat-message', (message) => {
-      setMessages((prevMessages) => [...prevMessages, message]);
-    });
+        socket.on("channel-users", (users) => {
+          setChannelUsers(users);
+        });
+      })
+      .catch((err) => {
+        console.error("Error accessing media devices:", err);
+      });
 
     return () => {
-      socket.off('user-connected');
-      socket.off('user-disconnected');
-      socket.off('chat-message');
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+      }
     };
   }, []);
 
-  const joinChannel = () => {
-    socket.emit('join-channel');
-    setIsConnected(true);
+  const handleCreateChannel = (newChannelId) => {
+    setChannelId(newChannelId);
+    socket.emit("join-channel", { channelId: newChannelId, userId });
   };
 
-  const leaveChannel = () => {
-    socket.emit('leave-channel');
-    setIsConnected(false);
+  const handleJoinChannel = (channelId) => {
+    setChannelId(channelId);
+    socket.emit("join-channel", { channelId, userId });
   };
 
-  const sendMessage = (event) => {
-    event.preventDefault();
-    if (message.trim() !== '') {
-      socket.emit('chat-message', message);
-      setMessage('');
-    }
+  const handleLeaveChannel = () => {
+    socket.emit("leave-channel", { channelId, userId });
+    setChannelId("");
+    setChannelUsers([]);
   };
 
-  const handleChatToggle = () => {
-    setChatInputVisible(!chatInputVisible);
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted);
+    localStream.getAudioTracks().forEach((track) => (track.enabled = !isMuted));
   };
 
   return (
-    <div className="voice-channel">
-      {!isConnected ? (
-        <button onClick={joinChannel}>Join Voice Channel</button>
+    <div>
+      <h1>Voice Channel App</h1>
+
+      {!channelId ? (
+        <div>
+          <h2>Create or Join a Channel</h2>
+          <button onClick={() => handleCreateChannel("general")}>Create General Channel</button>
+          <button onClick={() => handleJoinChannel("general")}>Join General Channel</button>
+          <button onClick={() => handleJoinChannel("tech")}>Join Tech Channel</button>
+          <button onClick={() => handleJoinChannel("gaming")}>Join Gaming Channel</button>
+        </div>
       ) : (
         <div>
-          <h2>Voice Channel</h2>
-          <button onClick={leaveChannel}>Leave Channel</button>
-          <div>
-            <h3>Users in Channel:</h3>
-            <ul>
-              {users.map((user, index) => (
-                <li key={index}>{user}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3>Chat:</h3>
-            {chatInputVisible && (
-              <form onSubmit={sendMessage}>
-                <input
-                  type="text"
-                  placeholder="Type a message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                />
-                <button type="submit">Send</button>
-              </form>
-            )}
-            <button onClick={handleChatToggle}>
-              {chatInputVisible ? 'Hide Chat' : 'Show Chat'}
-            </button>
-            <div>
-              {messages.map((msg, index) => (
-                <div key={index}>
-                  <strong>{msg.user}</strong>: {msg.text}
-                </div>
-              ))}
-            </div>
-          </div>
+          <h2>Joined Channel: {channelId}</h2>
+          <button onClick={handleLeaveChannel}>Leave Channel</button>
+
+          <h3>Users in this Channel</h3>
+          <ul>
+            {channelUsers.map((user, index) => (
+              <li key={index}>{user}</li>
+            ))}
+          </ul>
         </div>
       )}
+
+      <audio id="local-audio" muted autoPlay></audio>
+
+      <div id="remote-audio-container"></div>
+
+      <button onClick={handleMuteToggle}>{isMuted ? "Unmute" : "Mute"}</button>
     </div>
   );
 };
 
-export default VoiceChannel;
+export default VoiceChannelApp;
