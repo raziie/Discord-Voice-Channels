@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
+import './style.css';
 
 const socket = io("http://localhost:5000");
 
@@ -12,6 +13,7 @@ const VoiceChannelApp = () => {
   const [userId] = useState(Math.random().toString(36).substring(7)); // Random user ID
   const [channelUsers, setChannelUsers] = useState([]);
   const [channels, setChannels] = useState([]);
+  const [errorText, setErrorText] = useState("");
 
     useEffect(() => {
         socket.emit("get-channels");
@@ -61,8 +63,13 @@ const VoiceChannelApp = () => {
   }, []);
 
   const handleCreateChannel = (newChannelId) => {
-    setChannelId(newChannelId);
-    socket.emit("join-channel", { channelId: newChannelId, userId });
+    if (!newChannelId) {
+      setErrorText('name is required');
+    } else {
+      setErrorText('');
+      setChannelId(newChannelId);
+      socket.emit("join-channel", { channelId: newChannelId, userId });
+    }
   };
 
   const handleJoinChannel = (channelId) => {
@@ -89,10 +96,13 @@ const VoiceChannelApp = () => {
         <div>
           <h2>Create or Join a Channel</h2>
           <input onChange={(e) => setChannelName(e.target.value)} placeholder="New channel" />
+          <span class="error">{errorText}</span>
           <button onClick={() => handleCreateChannel(channelName)}>Create Channel</button>
-          {channels.map((channel) => (
-            <button onClick={() => handleJoinChannel(channel.name)}>Join {channel.name} Channel</button>
-          ))}
+          <div class="channel-list">
+            {channels.map((channel) => (
+              <button onClick={() => handleJoinChannel(channel.name)}>Join {channel.name} Channel</button>
+            ))}
+          </div>
         </div>
       ) : (
         <div>
