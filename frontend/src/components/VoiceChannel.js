@@ -97,12 +97,14 @@ const VoiceChannelApp = () => {
         <div>
           <h2>Create or Join a Channel</h2>
           <input onChange={(e) => setChannelName(e.target.value)} placeholder="New channel" />
-          <span class="error">{errorText}</span>
+          <span className="error">{errorText}</span>
           <button onClick={() => handleCreateChannel(channelName)}>Create Channel</button>
-          <div class="channel-list">
-            {channels.map((channel) => (
-              <button onClick={() => handleJoinChannel(channel.name)}>Join {channel.name} Channel</button>
-            ))}
+          <div className="channel-list">
+          {channels.map((channel) => (
+            <button key={channel.name} onClick={() => handleJoinChannel(channel.name)}>
+              Join {channel.name} Channel
+            </button>
+          ))}
           </div>
         </div>
       ) : (
@@ -112,9 +114,9 @@ const VoiceChannelApp = () => {
 
           <h3>Users in this Channel</h3>
           <ul>
-            {channelUsers.map((user, index) => (
-              <li key={index}>{user}</li>
-            ))}
+          {channelUsers.map((user) => (
+            <li key={user}>{user}</li>
+          ))}
           </ul>
         </div>
       )}
