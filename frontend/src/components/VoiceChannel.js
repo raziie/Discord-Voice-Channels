@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 import './style.css';
 
-// const socket = io("http://localhost:5000");
-const socket = io("http://192.168.1.53:5000");
+const socket = io("http://localhost:5000");
+// const socket = io("http://192.168.1.52:5000");
 
 let localStream;
 
@@ -11,24 +11,24 @@ const VoiceChannelApp = () => {
   const [channelName, setChannelName] = useState("");
   const [isMuted, setIsMuted] = useState(false);
   const [channelId, setChannelId] = useState("");
-  const [userId] = useState(Math.random().toString(36).substring(7)); // Random user ID
+  // const [userId] = useState(Math.random().toString(36).substring(7)); // Random user ID
   const [channelUsers, setChannelUsers] = useState([]);
   const [channels, setChannels] = useState([]);
   const [errorText, setErrorText] = useState("");
 
-    useEffect(() => {
-        socket.emit("get-channels");
+  useEffect(() => {
+      socket.emit("get-channels");
 
-        const handleChannels = (channels) => {
-            setChannels(channels);
-        };
+      const handleChannels = (channels) => {
+          setChannels(channels);
+      };
 
-        socket.on("channels", handleChannels);
+      socket.on("channels", handleChannels);
 
-        return () => {
-        socket.off("channels", handleChannels); // Cleanup listener on unmount
-        };
-    }, []);
+      return () => {
+      socket.off("channels", handleChannels); // Cleanup listener on unmount
+      };
+  }, []);
 
   useEffect(() => {
     // Get the user's media (audio)
@@ -38,14 +38,14 @@ const VoiceChannelApp = () => {
         localStream = stream;
         document.getElementById("local-audio").srcObject = stream;
 
-        socket.on("user-joined", (data) => {
-          console.log(`${data.userId} joined the channel`);
-          setChannelUsers((prev) => [...prev, data.userId]);
+        socket.on("user-joined", () => {
+          console.log(`${socket.id} joined the channel`);
+          setChannelUsers((prev) => [...prev, socket.id]);
         });
 
-        socket.on("user-left", (data) => {
-          console.log(`${data.userId} left the channel`);
-          setChannelUsers((prev) => prev.filter((id) => id !== data.userId));
+        socket.on("user-left", () => {
+          console.log(`${socket.id} left the channel`);
+          setChannelUsers((prev) => prev.filter((id) => id !== socket.id));
         });
 
         socket.on("channel-users", (users) => {
@@ -69,24 +69,26 @@ const VoiceChannelApp = () => {
     } else {
       setErrorText('');
       setChannelId(newChannelId);
-      socket.emit("join-channel", { channelId: newChannelId, userId });
+      socket.emit("join-channel", { channelId: newChannelId });
     }
   };
 
   const handleJoinChannel = (channelId) => {
     setChannelId(channelId);
-    socket.emit("join-channel", { channelId, userId });
+    socket.emit("join-channel", { channelId });
   };
 
   const handleLeaveChannel = () => {
-    socket.emit("leave-channel", { channelId, userId });
+    socket.emit("leave-channel", { channelId });
     setChannelId("");
     setChannelUsers([]);
   };
 
   const handleMuteToggle = () => {
-    setIsMuted(!isMuted);
-    localStream.getAudioTracks().forEach((track) => (track.enabled = !isMuted));
+    setIsMuted((prev) => !prev); // Toggle the mute state
+    localStream.getAudioTracks().forEach((track) => {
+      track.enabled = !track.enabled; // Toggle the track's enabled state
+    });
   };
 
   return (
@@ -121,7 +123,7 @@ const VoiceChannelApp = () => {
         </div>
       )}
 
-      <audio id="local-audio" muted autoPlay></audio>
+      <audio id="local-audio" autoPlay></audio>
 
       <div id="remote-audio-container"></div>
 
