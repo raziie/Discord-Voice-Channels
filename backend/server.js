@@ -60,7 +60,7 @@ io.on("connection", (socket) => {
       socket.join(channelId);
   
       // Emit to all users in the channel that a new user has joined
-      socket.to(channelId).emit("user-joined", {});
+      socket.to(channelId).emit("user-joined", channel.users);
   
       // Emit the current list of users in the channel to the joined user
       socket.emit("channel-users", channel.users);
@@ -80,7 +80,7 @@ io.on("connection", (socket) => {
         await channel.save();
   
         // Emit to other users that a user has left the channel
-        socket.to(channelId).emit("user-left", {});
+        socket.to(channelId).emit("user-left", channel.users);
   
         // Leave the channel room
         socket.leave(channelId);

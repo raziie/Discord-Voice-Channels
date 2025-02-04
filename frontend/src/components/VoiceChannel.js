@@ -9,7 +9,7 @@ let localStream;
 
 const VoiceChannelApp = () => {
   const [channelName, setChannelName] = useState("");
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [channelId, setChannelId] = useState("");
   // const [userId] = useState(Math.random().toString(36).substring(7)); // Random user ID
   const [channelUsers, setChannelUsers] = useState([]);
@@ -38,14 +38,14 @@ const VoiceChannelApp = () => {
         localStream = stream;
         document.getElementById("local-audio").srcObject = stream;
 
-        socket.on("user-joined", () => {
+        socket.on("user-joined", (users) => {
           console.log(`${socket.id} joined the channel`);
-          setChannelUsers((prev) => [...prev, socket.id]);
+          setChannelUsers(users);
         });
 
-        socket.on("user-left", () => {
+        socket.on("user-left", (users) => {
           console.log(`${socket.id} left the channel`);
-          setChannelUsers((prev) => prev.filter((id) => id !== socket.id));
+          setChannelUsers(users);
         });
 
         socket.on("channel-users", (users) => {
@@ -74,11 +74,13 @@ const VoiceChannelApp = () => {
   };
 
   const handleJoinChannel = (channelId) => {
+    setIsMuted(false);
     setChannelId(channelId);
     socket.emit("join-channel", { channelId });
   };
 
   const handleLeaveChannel = () => {
+    setIsMuted(true);
     socket.emit("leave-channel", { channelId });
     setChannelId("");
     setChannelUsers([]);
@@ -123,7 +125,7 @@ const VoiceChannelApp = () => {
         </div>
       )}
 
-      <audio id="local-audio" autoPlay></audio>
+      <audio id="local-audio" muted={isMuted ? true : false} autoPlay={true}></audio>
 
       <div id="remote-audio-container"></div>
 
