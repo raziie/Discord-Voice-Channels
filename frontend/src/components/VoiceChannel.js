@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 import './style.css';
 
-const socket = io("http://localhost:5000");
+// const socket = io("http://localhost:5000");
+const socket = io("https://192.168.1.52:5000");
 
 let localStream;
 let peerConnections = {};  // Store peer connections for each user
@@ -14,6 +15,7 @@ const VoiceChannelApp = () => {
   const [channelUsers, setChannelUsers] = useState([]);
   const [channels, setChannels] = useState([]);
   const [errorText, setErrorText] = useState("");
+  const [speakingUser, setSpeakingUser] = useState(null);
 
   useEffect(() => {
       socket.emit("get-channels");
@@ -53,6 +55,20 @@ const VoiceChannelApp = () => {
   }, []);
 
   useEffect(() => {
+    // Handle when a user starts speaking
+    socket.on("user-speaking", (userId) => {
+      console.log(`${userId} is speaking`);
+      // Update the UI to highlight the user who is speaking
+      // You can manage this using state, for example:
+      setSpeakingUser(userId); // Track the currently speaking user
+    });
+  
+    return () => {
+      socket.off("user-speaking"); // Cleanup on unmount
+    };
+  }, []);
+
+  useEffect(() => {
     // Get the user's media (audio)
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -60,6 +76,9 @@ const VoiceChannelApp = () => {
         localStream = stream;
         document.getElementById("local-audio").srcObject = stream;
         socket.emit("user-joined", socket.id);  // Emit user joined event
+
+        // Call function to monitor audio levels for this user
+        monitorAudio(stream, socket.id); // Track this user's audio levels
 
         socket.on("user-joined", (users) => {
           console.log(`${socket.id} joined the channel`);
@@ -85,6 +104,37 @@ const VoiceChannelApp = () => {
       }
     };
   }, [channelUsers]);
+
+  const monitorAudio = (stream, userId) => {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    setInterval(() => {
+      analyser.getByteFrequencyData(dataArray);
+      // let total = 0;
+      // for (let i = 0; i < bufferLength; i++) {
+      //   total += dataArray[i];
+      // }
+      // const averageVolume = total / bufferLength;
+
+      const averageVolume = dataArray.reduce((acc, val) => acc + val, 0) / bufferLength;
+
+      // Threshold for determining if someone is speaking
+      const speakingThreshold = 50;
+
+      // console.log(`${averageVolume} avggggggggggggggggggggggggggggggggggggggggggg`);
+
+      if (averageVolume > speakingThreshold) {
+        console.log(`${userId} is speaking`);
+        socket.emit('user-speaking', userId); // Notify server that this user is speaking
+      }
+    }, 100); // Check every 100ms
+  };
 
   // Handle channel creation
   const handleCreateChannel = (newChannelId) => {
@@ -120,6 +170,14 @@ const VoiceChannelApp = () => {
     localStream.getAudioTracks().forEach((track) => {
       track.enabled = !track.enabled; // Toggle the track's enabled state
     });
+
+    // If muting other users, mute their audio element:
+    if (speakingUser) {
+      const userAudioElement = document.getElementById('remote-user-' + speakingUser); // Get their audio element
+      if (userAudioElement) {
+        userAudioElement.muted = !userAudioElement.muted; // Mute/unmute their audio
+      }
+    }
   };
 
   // Handle answer from another user
@@ -188,7 +246,9 @@ const VoiceChannelApp = () => {
           <div className="users">
               {channelUsers.map((user) => (
                 <div className="user" key={user}>
-                  <div className="user-profile"></div>
+                  <div className="user-profile">
+                  {speakingUser === user && <span className="speaking"> (Speaking)</span>}
+                  </div>
                   <span className="user-name">{user}</span>
                 </div>
               ))}

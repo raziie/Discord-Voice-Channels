@@ -1,9 +1,12 @@
 const express = require('express');
-const http = require('http');
+// const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const Channel = require('./models/channel');
+
+const fs = require('fs');
+const https = require('https');
 
 require('dotenv').config();
 connectDB();
@@ -12,14 +15,28 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const privateKey = fs.readFileSync('../certs/localhost+2-key.pem', 'utf8');
+const certificate = fs.readFileSync('../certs/localhost+2.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
+
+const server = https.createServer(credentials, app);
+
+// const io = require('socket.io')(server);
+
 // Initialize HTTP server
-const server = http.createServer(app);
+// const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: "*" }
 });
 
 io.on("connection", (socket) => {
     console.log("New user connected");
+
+    socket.on("user-speaking", (userId) => {
+      console.log(`${userId} is speaking`);
+      // Broadcast this information to other users in the same channel
+      socket.broadcast.emit("user-speaking", userId); 
+    });
 
     // Handle finding all channels
     socket.on("get-channels", async () => {
@@ -124,7 +141,7 @@ io.on("connection", (socket) => {
 });  
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`HTTPS Server running on port ${PORT}`));
 // server.listen(PORT, "0.0.0.0", () => {
 //   console.log(`Server running at http://0.0.0.0:${PORT}`);
 // });
