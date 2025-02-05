@@ -3,15 +3,14 @@ import io from "socket.io-client";
 import './style.css';
 
 const socket = io("http://localhost:5000");
-// const socket = io("http://192.168.1.52:5000");
 
 let localStream;
+let peerConnections = {};  // Store peer connections for each user
 
 const VoiceChannelApp = () => {
   const [channelName, setChannelName] = useState("");
   const [isMuted, setIsMuted] = useState(true);
   const [channelId, setChannelId] = useState("");
-  // const [userId] = useState(Math.random().toString(36).substring(7)); // Random user ID
   const [channelUsers, setChannelUsers] = useState([]);
   const [channels, setChannels] = useState([]);
   const [errorText, setErrorText] = useState("");
@@ -23,10 +22,33 @@ const VoiceChannelApp = () => {
           setChannels(channels);
       };
 
+      // Handle offer from another user
+      const handleOffer = async (offer, fromSocketId) => {
+        const peerConnection = createPeerConnection(fromSocketId);
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit("answer", { to: fromSocketId, answer });
+      };
+
       socket.on("channels", handleChannels);
+      socket.on("user-joined", (users) => {
+          setChannelUsers(users);
+      });
+      socket.on("user-left", (users) => {
+          setChannelUsers(users);
+      });
+      socket.on("offer", handleOffer);
+      socket.on("answer", handleAnswer);
+      socket.on("ice-candidate", handleIceCandidate);
 
       return () => {
-      socket.off("channels", handleChannels); // Cleanup listener on unmount
+        socket.off("channels", handleChannels);
+        socket.off("user-joined");
+        socket.off("user-left");
+        socket.off("offer");
+        socket.off("answer");
+        socket.off("ice-candidate");
       };
   }, []);
 
@@ -37,6 +59,7 @@ const VoiceChannelApp = () => {
       .then((stream) => {
         localStream = stream;
         document.getElementById("local-audio").srcObject = stream;
+        socket.emit("user-joined", socket.id);  // Emit user joined event
 
         socket.on("user-joined", (users) => {
           console.log(`${socket.id} joined the channel`);
@@ -61,11 +84,12 @@ const VoiceChannelApp = () => {
         localStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [channelUsers]);
 
+  // Handle channel creation
   const handleCreateChannel = (newChannelId) => {
     if (!newChannelId) {
-      setErrorText('name is required');
+      setErrorText('Name is required');
     } else {
       setErrorText('');
       setChannelId(newChannelId);
@@ -73,24 +97,68 @@ const VoiceChannelApp = () => {
     }
   };
 
+  // Handle user joining a channel
   const handleJoinChannel = (channelId) => {
     setIsMuted(false);
     setChannelId(channelId);
     socket.emit("join-channel", { channelId });
   };
 
+  // Handle user leaving the channel
   const handleLeaveChannel = () => {
     setIsMuted(true);
     socket.emit("leave-channel", { channelId });
     setChannelId("");
     setChannelUsers([]);
+    Object.values(peerConnections).forEach(pc => pc.close());
+    peerConnections = {}; // Cleanup peer connections
   };
 
+  // Handle mute toggle for local audio
   const handleMuteToggle = () => {
-    setIsMuted((prev) => !prev); // Toggle the mute state
+    setIsMuted((prev) => !prev);
     localStream.getAudioTracks().forEach((track) => {
       track.enabled = !track.enabled; // Toggle the track's enabled state
     });
+  };
+
+  // Handle answer from another user
+  const handleAnswer = (answer, fromSocketId) => {
+    const peerConnection = peerConnections[fromSocketId];
+    peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+  };
+
+  // Handle ICE candidate
+  const handleIceCandidate = (candidate, fromSocketId) => {
+    const peerConnection = peerConnections[fromSocketId];
+    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+  };
+
+  // Create a new PeerConnection and set up events
+  const createPeerConnection = (toSocketId) => {
+    const peerConnection = new RTCPeerConnection();
+
+    // Add local audio track to peer connection
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+    });
+
+    // On receiving remote track, create a new audio element for the other user
+    peerConnection.ontrack = (event) => {
+      const remoteAudio = document.createElement('audio');
+      remoteAudio.srcObject = event.streams[0];
+      remoteAudio.autoplay = true;
+      document.getElementById("remote-audio-container").appendChild(remoteAudio);
+    };
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit("ice-candidate", { to: toSocketId, candidate: event.candidate });
+      }
+    };
+
+    peerConnections[toSocketId] = peerConnection;
+    return peerConnection;
   };
 
   return (
@@ -105,7 +173,7 @@ const VoiceChannelApp = () => {
           <button className="create" onClick={() => handleCreateChannel(channelName)}>Create Channel</button>
           <div className="channel-list">
           {channels.map((channel) => (
-            <button key={channel.name} onClick={() => handleJoinChannel(channel.name)}>
+            <button className="channel-button" key={channel.name} onClick={() => handleJoinChannel(channel.name)}>
               Join {channel.name} Channel
             </button>
           ))}
@@ -128,11 +196,17 @@ const VoiceChannelApp = () => {
         </div>
       )}
 
-      <audio id="local-audio" muted={isMuted ? true : false} autoPlay={true}></audio>
+      {/* <audio id="local-audio" muted={isMuted ? true : false} autoPlay={true}></audio>
 
       <div id="remote-audio-container"></div>
 
+      <button className="mute-button" onClick={handleMuteToggle}>{isMuted ? "Unmute" : "Mute"}</button> */}
+
+
+      <audio id="local-audio" muted={isMuted} autoPlay></audio>
+      <div id="remote-audio-container"></div>
       <button className="mute-button" onClick={handleMuteToggle}>{isMuted ? "Unmute" : "Mute"}</button>
+
     </div>
   );
 };

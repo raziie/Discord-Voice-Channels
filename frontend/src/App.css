@@ -1,6 +1,9 @@
+body {
+  background: #070F2B;
+}
+
 .App {
   text-align: center;
-  background: #070F2B;
   height: 100vh;
   color: #B19CD9;
 }
@@ -92,7 +95,7 @@
   background: #1B1A55; /* Light background */
   padding: 8px 12px;
   border-radius: 8px;
-  width: fit-content;
+  width: 300px;
 }
 
 .user-profile {

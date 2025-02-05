@@ -1,14 +1,50 @@
+# services:
+#   backend:
+#     build: ./backend
+#     ports:
+#       - "5000:5000"
+#     environment:
+#       # - MONGO_URI=mongodb://127.0.0.1:27017/voice-channels
+#       - MONGO_URI=mongodb://host.docker.internal:27017/voice-channels
+#       # - MONGO_URI=mongodb://192.168.1.52:27017/voice-channels
+#     depends_on:
+#       - mongo
+
+#   frontend:
+#     build: ./frontend
+#     ports:
+#       - "3000:3000"
+#     depends_on:
+#       - backend
+
+#   mongo:
+#     image: mongo
+#     ports:
+#       - "27017:27017"
+#       # - "192.168.1.52:27017:27017"
+#     volumes:
+#       - mongo-data:/data/db
+
+# volumes:
+#   mongo-data:
+
+
+
 services:
   backend:
     build: ./backend
     ports:
       - "5000:5000"
     environment:
-      # - MONGO_URI=mongodb://127.0.0.1:27017/voice-channels
+      # - MONGO_URI=mongodb://mongo:27017/voice-channels 
       - MONGO_URI=mongodb://host.docker.internal:27017/voice-channels
-      # - MONGO_URI=mongodb://192.168.1.52:27017/voice-channels
     depends_on:
       - mongo
+    volumes:
+      - ./backend:/app  # Mount backend folder for live updates
+      - /app/node_modules  # Prevent overwriting node_modules
+    working_dir: /app
+    command: npm run dev  # Run the dev script for live reload
 
   frontend:
     build: ./frontend
@@ -16,12 +52,16 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+    volumes:
+      - ./frontend:/app  # Mount frontend folder for live updates
+      - /app/node_modules
+    working_dir: /app
+    command: npm start  # Ensure frontend live reload works
 
   mongo:
     image: mongo
     ports:
       - "27017:27017"
-      # - "192.168.1.52:27017:27017"
     volumes:
       - mongo-data:/data/db
 
