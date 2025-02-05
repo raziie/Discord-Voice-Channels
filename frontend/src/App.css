@@ -1,5 +1,110 @@
 .App {
   text-align: center;
+  background: #070F2B;
+  height: 100vh;
+  color: #B19CD9;
+}
+
+.channel-list{
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    gap: 10px; /* Space between channels */
+}
+
+.input-name{
+    width: 10%;
+    height: 15px;
+    background: #BCBBDA;
+    padding: 10px 5px;
+    margin-right: 5px;
+    margin-bottom: 8px;
+}
+
+.create{
+    width: 10%;
+    height: 40px;
+    background: #9290C3;
+    padding: 10px 5px;
+    margin-bottom: 8px;
+}
+
+.create:hover {
+  background-color: #666488;
+}
+
+.mute-button{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 5%;
+    height: 30px;
+    background: #9290C3;
+    padding: 10px 5px;
+    margin-top:8px;
+    margin-left: 47.5%;
+}
+
+.mute-button:hover {
+  background-color: #666488;
+}
+
+.channel-button {
+  margin: auto;
+  width: 10%;
+  font-size: 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  background-color: #535C91;
+  color: white;
+  padding: 10px 5px;
+  transition: background-color 0.3s ease;
+}
+
+.channel-button:hover {
+  background-color: #424a77;
+}
+
+.leave-button{
+    width: 10%;
+    height: 40px;
+    background: #9290C3;
+    padding: 10px 5px;
+    margin-bottom: 8px;
+}
+
+.leave-button:hover {
+  background-color: #666488;
+}
+
+.users {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px; /* Spacing between users */
+  padding: 10px;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between profile and name */
+  background: #1B1A55; /* Light background */
+  padding: 8px 12px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.user-profile {
+  width: 40px; /* Profile picture size */
+  height: 40px;
+  background-color: #535C91; /* Default profile color */
+  border-radius: 50%; /* Makes it a circle */
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .App-logo {

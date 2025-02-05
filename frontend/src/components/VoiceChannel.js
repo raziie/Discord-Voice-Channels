@@ -100,9 +100,9 @@ const VoiceChannelApp = () => {
       {!channelId ? (
         <div>
           <h2>Create or Join a Channel</h2>
-          <input onChange={(e) => setChannelName(e.target.value)} placeholder="New channel" />
+          <input className="input-name" onChange={(e) => setChannelName(e.target.value)} placeholder="New channel" />
           <span className="error">{errorText}</span>
-          <button onClick={() => handleCreateChannel(channelName)}>Create Channel</button>
+          <button className="create" onClick={() => handleCreateChannel(channelName)}>Create Channel</button>
           <div className="channel-list">
           {channels.map((channel) => (
             <button key={channel.name} onClick={() => handleJoinChannel(channel.name)}>
@@ -114,14 +114,17 @@ const VoiceChannelApp = () => {
       ) : (
         <div>
           <h2>Joined Channel: {channelId}</h2>
-          <button onClick={handleLeaveChannel}>Leave Channel</button>
+          <button className="leave-button" onClick={handleLeaveChannel}>Leave Channel</button>
 
           <h3>Users in this Channel</h3>
-          <ul>
-          {channelUsers.map((user) => (
-            <li key={user}>{user}</li>
-          ))}
-          </ul>
+          <div className="users">
+              {channelUsers.map((user) => (
+                <div className="user" key={user}>
+                  <div className="user-profile"></div>
+                  <span className="user-name">{user}</span>
+                </div>
+              ))}
+            </div>
         </div>
       )}
 
@@ -129,7 +132,7 @@ const VoiceChannelApp = () => {
 
       <div id="remote-audio-container"></div>
 
-      <button onClick={handleMuteToggle}>{isMuted ? "Unmute" : "Mute"}</button>
+      <button className="mute-button" onClick={handleMuteToggle}>{isMuted ? "Unmute" : "Mute"}</button>
     </div>
   );
 };
