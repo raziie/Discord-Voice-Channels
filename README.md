@@ -87,3 +87,11 @@ For the latest updates and source code, visit the GitHub repository:
 
 Enjoy your self-hosted voice channels! 🎙️
 
+Images:
+
+![Screenshot 2025-02-06 074140](https://github.com/user-attachments/assets/8f331f10-2841-4395-a3e0-3a2a4dc4297d)
+
+![5846001526026390762](https://github.com/user-attachments/assets/e91c3c32-cc01-4274-bd9a-764c1a00bb37)
+
+
+
